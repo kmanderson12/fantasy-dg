@@ -5,6 +5,9 @@ async function main(eventId, round, eventName = '') {
   await getEventScores(eventId, round, eventName);
 }
 
+// TODO: Multiple rounds
+// TODO: Only calculate placePoints during last round
+
 async function getEventScores(eventId, round, eventName) {
   console.log(eventName);
   console.log(`Event ID: ${eventId}`);
@@ -47,28 +50,28 @@ async function getEventScores(eventId, round, eventName) {
       birdieData,
     } = scores.reduce(
       (prev, cur, idx) => {
-        let currentHoleScore = calculatePerHoleScore(
+        let curHoleScore = calculatePerHoleScore(
           parseInt(pars[idx]),
           parseInt(cur)
         );
 
         const {
-          currentBirdieStreak,
-          currentNumOfBirdieStreaks,
-          currentBirdieStreakPoints,
+          curBirdieStreak,
+          curNumOfBirdieStreaks,
+          curBirdieStreakPoints,
         } = calculateBirdieStreakPoints(
-          currentHoleScore,
+          curHoleScore,
           prev.birdieStreak,
           prev.numOfBirdieStreaks,
           prev.birdieStreakPoints
         );
 
         return {
-          perHoleTotal: prev.perHoleTotal + currentHoleScore,
-          isBogeyFree: currentHoleScore > 0 && prev.isBogeyFree,
-          birdieStreak: currentBirdieStreak,
-          birdieStreakPoints: currentBirdieStreakPoints,
-          numOfBirdieStreaks: currentNumOfBirdieStreaks,
+          perHoleTotal: prev.perHoleTotal + curHoleScore,
+          isBogeyFree: curHoleScore > 0 && prev.isBogeyFree,
+          birdieStreak: curBirdieStreak,
+          birdieStreakPoints: curBirdieStreakPoints,
+          numOfBirdieStreaks: curNumOfBirdieStreaks,
         };
       },
       {
@@ -97,13 +100,10 @@ async function getEventScores(eventId, round, eventName) {
         placePoints + perHoleTotal + birdieStreakPoints + bogeyFreePoints,
     };
 
-    console.log(thisRoundFantasyScore);
     fantasyScores.push(thisRoundFantasyScore);
-    // TODO:
-    //    - Per hole scoring  - Calculate on the fly, map against object
-    //    - Bonus points  - Calculate on the fly
-    //    - Handle if player DNF or did not play?
   });
+
+  console.log(fantasyScores);
 
   // save the JSON to disk
   await fs.promises.writeFile(
@@ -127,34 +127,32 @@ function calculatePerHoleScore(par, holeScore) {
   let scoreToPar = (par - holeScore) * -1;
   if (holeScore == 1 || scoreToPar <= -3) return 20; // incredible!!
   if (scoreToPar >= 2) return -1; // ouch.
-  else {
-    return perHoleScoringPoints[scoreToPar];
-  }
+  return perHoleScoringPoints[scoreToPar];
 }
 
 function calculateBirdieStreakPoints(
-  currentHoleScore,
+  curHoleScore,
   prevBirdieStreak,
   prevNumOfBirdieStreaks,
   prevBirdieStreakPoints
 ) {
-  let currentBirdieStreak = prevBirdieStreak;
-  let currentNumOfBirdieStreaks = prevNumOfBirdieStreaks;
-  let currentBirdieStreakPoints = prevBirdieStreakPoints;
+  let curBirdieStreak = prevBirdieStreak;
+  let curNumOfBirdieStreaks = prevNumOfBirdieStreaks;
+  let curBirdieStreakPoints = prevBirdieStreakPoints;
 
-  if (currentHoleScore >= 3) {
-    currentBirdieStreak = currentBirdieStreak + 1;
+  if (curHoleScore >= 3) {
+    curBirdieStreak = curBirdieStreak + 1;
   } else {
-    currentBirdieStreak = 0;
+    curBirdieStreak = 0;
   }
-  if (currentBirdieStreak >= 3) {
-    currentBirdieStreakPoints = prevBirdieStreakPoints + 3;
-    currentNumOfBirdieStreaks = currentNumOfBirdieStreaks + 1;
+  if (curBirdieStreak >= 3) {
+    curBirdieStreakPoints = prevBirdieStreakPoints + 3;
+    curNumOfBirdieStreaks = curNumOfBirdieStreaks + 1;
   }
   return {
-    currentBirdieStreak,
-    currentNumOfBirdieStreaks,
-    currentBirdieStreakPoints,
+    curBirdieStreak,
+    curNumOfBirdieStreaks,
+    curBirdieStreakPoints,
   };
 }
 
