@@ -63,18 +63,6 @@ async function getEventScores(eventId, round, eventName) {
           prev.birdieStreakPoints
         );
 
-        // let currentBirdieStreak = prev.birdieStreak;
-        // let currentNumOfBirdieStreaks = prev.numOfBirdieStreaks;
-        // if (currentHoleScore >= 3) {
-        //   currentBirdieStreak = currentBirdieStreak + 1;
-        // } else {
-        //   currentBirdieStreak = 0;
-        // }
-        // let currentBirdieStreakPoints = prev.birdieStreakPoints;
-        // if (currentBirdieStreak >= 3) {
-        //   currentBirdieStreakPoints = prev.birdieStreakPoints + 3;
-        //   currentNumOfBirdieStreaks = currentNumOfBirdieStreaks + 1;
-        // }
         return {
           perHoleTotal: prev.perHoleTotal + currentHoleScore,
           isBogeyFree: currentHoleScore > 0,
@@ -170,19 +158,25 @@ function calculateBirdieStreakPoints(
   };
 }
 
-// Gannon, Gibson, Eagle
-const players = [48346, 75412, 37817];
-
+// Waco
+const eventName = 'Waco';
+const eventId = 55582;
 // McBeth, Dickerson, Wysocki, Jones
-// const players = [27523, 62467, 38008, 41760];
+const players = [27523, 62467, 38008, 41760];
+// round options: 1, 2, 3, 'Finals'
+const round = '3';
 
-// const eventId = 55582; // WACO
-const eventId = 55580; // LVC
+// LVC
+// const eventName = 'Las Vegas Challenge'
+// const eventId = 55580;
+// Gannon, Gibson, Eagle
+// const players = [48346, 75412, 37817];
 
 // round options: 1, 2, 3, 'Finals'
-const round = 'Finals';
+// const round = 'Finals';
+
 // start the main script
-main(eventId, round, 'Las Vegas Challenge');
+main(eventId, round, eventName);
 
 const placementPoints = {
   1: 30,
