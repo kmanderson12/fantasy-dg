@@ -65,7 +65,7 @@ async function getEventScores(eventId, round, eventName) {
 
         return {
           perHoleTotal: prev.perHoleTotal + currentHoleScore,
-          isBogeyFree: currentHoleScore > 0,
+          isBogeyFree: currentHoleScore > 0 && prev.isBogeyFree,
           birdieStreak: currentBirdieStreak,
           birdieStreakPoints: currentBirdieStreakPoints,
           numOfBirdieStreaks: currentNumOfBirdieStreaks,
@@ -158,14 +158,6 @@ function calculateBirdieStreakPoints(
   };
 }
 
-// Waco
-const eventName = 'Waco';
-const eventId = 55582;
-// McBeth, Dickerson, Wysocki, Jones
-const players = [27523, 62467, 38008, 41760];
-// round options: 1, 2, 3, 'Finals'
-const round = '3';
-
 // LVC
 // const eventName = 'Las Vegas Challenge'
 // const eventId = 55580;
@@ -174,6 +166,22 @@ const round = '3';
 
 // round options: 1, 2, 3, 'Finals'
 // const round = 'Finals';
+
+// Waco
+// const eventName = 'Waco';
+// const eventId = 55582;
+// McBeth, Dickerson, Wysocki, Jones
+// const players = [27523, 62467, 38008, 41760];
+// round options: 1, 2, 3, 'Finals'
+// const round = '3';
+
+// Texas
+const eventName = 'Texas States';
+const eventId = 55583;
+// Dickerson, McBeth, Wysocki, Jones
+const players = [62467, 27523, 38008, 41760];
+// round options: 1, 2, 3, 'Finals'
+const round = '2';
 
 // start the main script
 main(eventId, round, eventName);
