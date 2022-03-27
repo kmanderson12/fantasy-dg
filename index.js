@@ -3,11 +3,22 @@ const fs = require('fs');
 const calcFunctions = require('./utils/calcFunctions');
 const testData = require('./data/testData');
 
-const { eventId, round, eventName, players } = testData.Waco; // switch to other events for different results
+const { eventId, players } = testData.LVC; // switch to other events for different results
 
 async function main() {
-  // await getEventData(eventId);
-  await getPerRoundScores(eventId, round, eventName);
+  let { data: eventData } = await getEventData(eventId);
+
+  let eventName = eventData.SimpleName;
+  let isEventFinals = eventData.Finals === 'yes'; // In 4 round events, the "Finals" are the 4th round.
+  let totalRounds = Array.from(
+    { length: isEventFinals ? 4 : 3 },
+    (_, i) => i + 1
+  );
+
+  for (const round of totalRounds) {
+    console.log(`Fetching Round ${round} data...`);
+    await getPerRoundScores(eventId, round, eventName);
+  }
 }
 
 // TODO: Multiple rounds - Pull event data first, then fetch rounds based on "Finals" yes/no
@@ -34,22 +45,25 @@ async function getEventData(eventId) {
     `event-output-${eventId}.json`,
     JSON.stringify(results, null, 2)
   );
+
+  return results;
 }
 
 async function getPerRoundScores(eventId, round, eventName) {
+  let curRound = round > 3 ? 'Finals' : round;
   console.log(eventName);
   console.log(`Event ID: ${eventId}`);
-  console.log(`Round: ${round}`);
+  console.log(`Round: ${curRound}`);
   console.log('Making API Request...');
   // request the data from the JSON API
   const results = await rp({
-    uri: `https://www.pdga.com/apps/tournament/live-api/live_results_fetch_round.php?TournID=${eventId}&Division=MPO&Round=${round}`,
+    uri: `https://www.pdga.com/apps/tournament/live-api/live_results_fetch_round.php?TournID=${eventId}&Division=MPO&Round=${curRound}`,
     headers: {
       Connection: 'keep-alive',
       authority: 'www.pdga.com',
       'User-Agent':
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-      Referer: `https://www.pdga.com/apps/tournament/live/event?eventId=${eventId}&division=MPO&view=Scores&round=${round}`,
+      Referer: `https://www.pdga.com/apps/tournament/live/event?eventId=${eventId}&division=MPO&view=Scores&round=${curRound}`,
     },
     json: true,
   });
@@ -116,7 +130,7 @@ async function getPerRoundScores(eventId, round, eventName) {
     let thisRoundFantasyScore = {
       name: player.Name,
       eventId,
-      round,
+      curRound,
       place,
       placePoints,
       perHoleTotal,
@@ -133,6 +147,7 @@ async function getPerRoundScores(eventId, round, eventName) {
 
   console.log(fantasyScores);
 
+  await sleep(500);
   // save the JSON to disk
   await fs.promises.writeFile(
     'output.json',
@@ -143,3 +158,7 @@ async function getPerRoundScores(eventId, round, eventName) {
 
 // start the main script
 main();
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
