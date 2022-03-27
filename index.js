@@ -23,6 +23,8 @@ async function main() {
 
 // TODO: Multiple rounds - Pull event data first, then fetch rounds based on "Finals" yes/no
 // TODO: Only calculate placePoints during last round
+// TODO: Change totalScore to roundTotal
+// TODO: Create external object to track each player's per round results
 
 async function getEventData(eventId) {
   console.log('Fetching Event Data...');
