@@ -6,13 +6,48 @@ const PlayerTracker = require('./utils/PlayerTracker');
 
 const { eventId, players } = testData.Texas; // switch to other events for different results
 
-let playerTotals = {};
-players.forEach((p) => {
-  let curPlayer = PlayerTracker(p, eventId);
-  playerTotals[p] = curPlayer;
-});
+// let playerTotals = {};
+// players.forEach((p) => {
+//   let curPlayer = PlayerTracker(p, eventId);
+//   playerTotals[p] = curPlayer;
+// });
 
+// TODO: Create a User object that stores their tournament picks
 // TODO: Create a separate player picker that is run based on the event
+
+// TODO: Workflow:
+/*
+User picks Tournament and the other Users that will participate >
+  A TournamentTracker is created which contains:
+  1. an array of UserFantasyScoreTracker
+  2. getter for Placement
+  3. getters for other stats: isTournamentComplete, etc
+*/
+
+// TODO: Remove playerTotals from global scope
+function UserFantasyScoreTracker(userId, eventId, players) {
+  let obj = {
+    userId,
+    eventId,
+    players,
+    get totalFantasyPoints() {
+      let keys = Object.keys(this.playerTotals);
+      if (!keys) return 0;
+      return keys.reduce(
+        (prev, cur) => prev + this.playerTotals[cur].totalScore,
+        0
+      );
+    },
+    playerTotals: {},
+  };
+  obj.players.forEach((p) => {
+    let curPlayer = PlayerTracker(p, eventId);
+    obj.playerTotals[p] = curPlayer;
+  });
+  return obj;
+}
+
+let currentUser = UserFantasyScoreTracker(1234, eventId, players);
 
 async function getPerRoundScores(eventId, round, eventName, totalRounds) {
   let curRound = round > 3 ? 'Finals' : round;
@@ -37,10 +72,8 @@ async function getPerRoundScores(eventId, round, eventName, totalRounds) {
   const allScores = results.data.scores;
 
   const playerData = allScores.filter(
-    (i) => players.filter((p) => i.PDGANum == p).length > 0
+    (i) => currentUser.players.filter((p) => i.PDGANum == p).length > 0
   );
-
-  let fantasyScores = [];
 
   console.log('Round scores:');
   playerData.forEach((player) => {
@@ -108,27 +141,23 @@ async function getPerRoundScores(eventId, round, eventName, totalRounds) {
         placePoints + perHoleTotal + birdieStreakPoints + bogeyFreePoints,
     };
 
-    playerTotals[player.PDGANum].rounds.push(thisRoundFantasyScore);
-    playerTotals[player.PDGANum].name = player.Name;
-    // playerTotals[player.PDGANum].addRound = thisRoundFantasyScore;
+    currentUser.playerTotals[player.PDGANum].rounds.push(thisRoundFantasyScore);
+    currentUser.playerTotals[player.PDGANum].name = player.Name;
+
     if (isFinalRound) {
       console.log(
         `${player.Name} - Total Score: `,
-        playerTotals[player.PDGANum].totalScore
+        currentUser.playerTotals[player.PDGANum].totalScore
       );
-      console.log(JSON.stringify(playerTotals[player.PDGANum], null, 2));
+      console.log(JSON.stringify(currentUser, null, 2));
     }
-
-    fantasyScores.push(thisRoundFantasyScore);
   });
-
-  // console.log(fantasyScores);
 
   await sleep(500);
   // save the JSON to disk
   await fs.promises.writeFile(
     'output.json',
-    JSON.stringify(fantasyScores, null, 2)
+    JSON.stringify(currentUser, null, 2)
   );
   console.log('Done!');
 }
