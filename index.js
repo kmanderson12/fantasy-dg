@@ -2,57 +2,21 @@ const rp = require('request-promise-native');
 const fs = require('fs');
 const calcFunctions = require('./utils/calcFunctions');
 const testData = require('./data/testData');
+const PlayerTracker = require('./utils/PlayerTracker');
 
-const { eventId, players } = testData.LVC; // switch to other events for different results
+const { eventId, players } = testData.Texas; // switch to other events for different results
 
-async function main() {
-  let { data: eventData } = await getEventData(eventId);
+let playerTotals = {};
+players.forEach((p) => {
+  let curPlayer = PlayerTracker(p, eventId);
+  playerTotals[p] = curPlayer;
+});
 
-  let eventName = eventData.SimpleName;
-  let isEventFinals = eventData.Finals === 'yes'; // In 4 round events, the "Finals" are the 4th round.
-  let totalRounds = Array.from(
-    { length: isEventFinals ? 4 : 3 },
-    (_, i) => i + 1
-  );
+// TODO: Create a separate player picker that is run based on the event
 
-  for (const round of totalRounds) {
-    console.log(`Fetching Round ${round} data...`);
-    await getPerRoundScores(eventId, round, eventName);
-  }
-}
-
-// TODO: Multiple rounds - Pull event data first, then fetch rounds based on "Finals" yes/no
-// TODO: Only calculate placePoints during last round
-// TODO: Change totalScore to roundTotal
-// TODO: Create external object to track each player's per round results
-
-async function getEventData(eventId) {
-  console.log('Fetching Event Data...');
-  // request the data from the JSON API
-  const results = await rp({
-    uri: `https://www.pdga.com/apps/tournament/live-api/live_results_fetch_event.php?TournID=${eventId}`,
-    headers: {
-      Connection: 'keep-alive',
-      authority: 'www.pdga.com',
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-      Referer: `https://www.pdga.com/apps/tournament/live/event?eventId=${eventId}&division=MPO&view=Scores`,
-    },
-    json: true,
-  });
-  console.log('Got Event results!');
-
-  // save the JSON to disk
-  await fs.promises.writeFile(
-    `event-output-${eventId}.json`,
-    JSON.stringify(results, null, 2)
-  );
-
-  return results;
-}
-
-async function getPerRoundScores(eventId, round, eventName) {
+async function getPerRoundScores(eventId, round, eventName, totalRounds) {
   let curRound = round > 3 ? 'Finals' : round;
+  let isFinalRound = round === totalRounds.length;
   console.log(eventName);
   console.log(`Event ID: ${eventId}`);
   console.log(`Round: ${curRound}`);
@@ -144,10 +108,21 @@ async function getPerRoundScores(eventId, round, eventName) {
         placePoints + perHoleTotal + birdieStreakPoints + bogeyFreePoints,
     };
 
+    playerTotals[player.PDGANum].rounds.push(thisRoundFantasyScore);
+    playerTotals[player.PDGANum].name = player.Name;
+    // playerTotals[player.PDGANum].addRound = thisRoundFantasyScore;
+    if (isFinalRound) {
+      console.log(
+        `${player.Name} - Total Score: `,
+        playerTotals[player.PDGANum].totalScore
+      );
+      console.log(JSON.stringify(playerTotals[player.PDGANum], null, 2));
+    }
+
     fantasyScores.push(thisRoundFantasyScore);
   });
 
-  console.log(fantasyScores);
+  // console.log(fantasyScores);
 
   await sleep(500);
   // save the JSON to disk
@@ -163,4 +138,45 @@ main();
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function main() {
+  let { data: eventData } = await getEventData(eventId);
+  let eventName = eventData.SimpleName;
+
+  let isEventFinals = eventData.Finals === 'yes'; // In 4 round events, the "Finals" are the 4th round.
+  let totalRounds = Array.from(
+    { length: isEventFinals ? 4 : 3 },
+    (_, i) => i + 1
+  );
+
+  for (const round of totalRounds) {
+    console.log(`Fetching Round ${round} data...`);
+    await getPerRoundScores(eventId, round, eventName, totalRounds);
+  }
+}
+
+async function getEventData(eventId) {
+  console.log('Fetching Event Data...');
+  // request the data from the JSON API
+  const results = await rp({
+    uri: `https://www.pdga.com/apps/tournament/live-api/live_results_fetch_event.php?TournID=${eventId}`,
+    headers: {
+      Connection: 'keep-alive',
+      authority: 'www.pdga.com',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+      Referer: `https://www.pdga.com/apps/tournament/live/event?eventId=${eventId}&division=MPO&view=Scores`,
+    },
+    json: true,
+  });
+  console.log('Got Event results!');
+
+  // save the JSON to disk
+  await fs.promises.writeFile(
+    `event-output-${eventId}.json`,
+    JSON.stringify(results, null, 2)
+  );
+
+  return results;
 }

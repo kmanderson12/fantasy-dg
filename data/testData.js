@@ -19,7 +19,7 @@ const Texas = {
   eventName: 'Texas States',
   eventId: 55583,
   players: [27523, 62467, 38008, 41760], // McBeth, Dickerson, Wysocki, Jones
-  round: '2',
+  round: '3',
 };
 
 module.exports = {
