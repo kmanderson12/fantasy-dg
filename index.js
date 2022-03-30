@@ -1,18 +1,14 @@
-const rp = require('request-promise-native');
 const fs = require('fs');
+const {
+  fetchEventData,
+  fetchTournamentResultsByRound,
+} = require('./utils/fetchFunctions');
 const calcFunctions = require('./utils/calcFunctions');
 const testData = require('./data/testData');
-const PlayerTracker = require('./utils/PlayerTracker');
+const UserFantasyScoreTracker = require('./components/UserFantasyScoreTracker');
 
 const { eventId, players } = testData.Texas; // switch to other events for different results
 
-// let playerTotals = {};
-// players.forEach((p) => {
-//   let curPlayer = PlayerTracker(p, eventId);
-//   playerTotals[p] = curPlayer;
-// });
-
-// TODO: Create a User object that stores their tournament picks
 // TODO: Create a separate player picker that is run based on the event
 
 // TODO: Workflow:
@@ -24,29 +20,6 @@ User picks Tournament and the other Users that will participate >
   3. getters for other stats: isTournamentComplete, etc
 */
 
-// TODO: Remove playerTotals from global scope
-function UserFantasyScoreTracker(userId, eventId, players) {
-  let obj = {
-    userId,
-    eventId,
-    players,
-    get totalFantasyPoints() {
-      let keys = Object.keys(this.playerTotals);
-      if (!keys) return 0;
-      return keys.reduce(
-        (prev, cur) => prev + this.playerTotals[cur].totalScore,
-        0
-      );
-    },
-    playerTotals: {},
-  };
-  obj.players.forEach((p) => {
-    let curPlayer = PlayerTracker(p, eventId);
-    obj.playerTotals[p] = curPlayer;
-  });
-  return obj;
-}
-
 let currentUser = UserFantasyScoreTracker(1234, eventId, players);
 
 async function getPerRoundScores(eventId, round, eventName, totalRounds) {
@@ -56,18 +29,11 @@ async function getPerRoundScores(eventId, round, eventName, totalRounds) {
   console.log(`Event ID: ${eventId}`);
   console.log(`Round: ${curRound}`);
   console.log('Making API Request...');
-  // request the data from the JSON API
-  const results = await rp({
-    uri: `https://www.pdga.com/apps/tournament/live-api/live_results_fetch_round.php?TournID=${eventId}&Division=MPO&Round=${curRound}`,
-    headers: {
-      Connection: 'keep-alive',
-      authority: 'www.pdga.com',
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-      Referer: `https://www.pdga.com/apps/tournament/live/event?eventId=${eventId}&division=MPO&view=Scores&round=${curRound}`,
-    },
-    json: true,
-  });
+  const { data: results } = await fetchTournamentResultsByRound(
+    eventId,
+    curRound
+  );
+
   console.log('Got results!');
   const allScores = results.data.scores;
 
@@ -187,18 +153,7 @@ async function main() {
 
 async function getEventData(eventId) {
   console.log('Fetching Event Data...');
-  // request the data from the JSON API
-  const results = await rp({
-    uri: `https://www.pdga.com/apps/tournament/live-api/live_results_fetch_event.php?TournID=${eventId}`,
-    headers: {
-      Connection: 'keep-alive',
-      authority: 'www.pdga.com',
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-      Referer: `https://www.pdga.com/apps/tournament/live/event?eventId=${eventId}&division=MPO&view=Scores`,
-    },
-    json: true,
-  });
+  const { data: results } = await fetchEventData(eventId);
   console.log('Got Event results!');
 
   // save the JSON to disk
