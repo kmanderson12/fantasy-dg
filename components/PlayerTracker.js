@@ -1,8 +1,11 @@
 function PlayerTracker(pdgaNum, eventId) {
   let obj = {
     pdgaNum,
-    name: '',
     eventId,
+    get name() {
+      if (!this.rounds.length) return '';
+      return this.rounds[0].name; // eventually this will be set on initialization, but for now...
+    },
     get placeFinished() {
       if (!this.rounds.length) return 0;
       return this.rounds[this.rounds.length - 1].place;

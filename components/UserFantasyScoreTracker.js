@@ -1,8 +1,9 @@
 const PlayerTracker = require('./PlayerTracker');
 
-function UserFantasyScoreTracker(userId, eventId, players) {
+function UserFantasyScoreTracker({ userId, name }, eventId, players) {
   let obj = {
     userId,
+    name,
     eventId,
     players,
     get totalFantasyPoints() {
