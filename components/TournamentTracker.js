@@ -12,10 +12,10 @@ function TournamentTracker(eventId) {
       return this.users
         .sort((a, b) => b.totalFantasyPoints - a.totalFantasyPoints)
         .reduce((prev, cur, idx) => {
-          let newObj = prev;
-          newObj[idx + 1] = cur.name; // TODO: switch to userId when no longer using console.
-          return newObj;
-        }, {});
+          let newArr = [];
+          newArr.push(cur.userId);
+          return [...prev, cur.userId];
+        }, []);
     },
     users: [],
   };

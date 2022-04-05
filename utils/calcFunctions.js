@@ -1,7 +1,7 @@
 const constants = require('./constants');
 
-function calculatePlacementScore(place) {
-  if (place > 50) return 0;
+function calculatePlacementScore(place, isFinalRound) {
+  if (!isFinalRound || place > 50) return 0;
   let placementPointsKeys = Object.keys(constants.PLACEMENT_POINTS);
   for (const key of placementPointsKeys) {
     if (parseInt(key) >= place) {
@@ -32,9 +32,10 @@ function calculateBirdieStreakPoints(
   } else {
     curBirdieStreak = 0;
   }
-  if (curBirdieStreak >= 3) {
+  if (curBirdieStreak === 3) {
     curBirdieStreakPoints = prevBirdieStreakPoints + 3;
     curNumOfBirdieStreaks = curNumOfBirdieStreaks + 1;
+    curBirdieStreak = 0;
   }
   return {
     curBirdieStreak,

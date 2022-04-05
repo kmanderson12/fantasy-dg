@@ -8,7 +8,7 @@ const testData = require('./data/testData');
 const TournamentTracker = require('./components/TournamentTracker');
 const UserFantasyScoreTracker = require('./components/UserFantasyScoreTracker');
 
-const { eventId } = testData.Texas; // switch to other events for different results
+const { eventId } = testData.MCO; // switch to other events for different results
 
 // TODO: Create a separate player picker that is run based on the event
 
@@ -25,29 +25,34 @@ const teamA = [38008, 45971, 15857, 69509]; // Ricky, Calvin, Barsby, Freeman (t
 const teamB = [17295, 33705, 75412, 27523]; // Conrad, BigJerm, Buhr, McBeth (next 4)
 const teamC = [62467, 47472, 23844, 49885]; // Dickerson, EKeith, Willis II, Hancock (next 4)
 
+// MCO
+const teamJay = [62467, 13864, 128378, 39015, 57493];
+const teamKyle = [57365, 69509, 11534, 47472, 91249];
+const teamJoe = [85132, 41760, 50401, 50670, 121715];
+
 let userList = [
   {
     userId: 'kmanderson12',
     name: 'Kyle Anderson',
-    players: teamC,
+    players: teamKyle,
   },
   {
     userId: 'beastbomb36',
     name: 'Jaylen Qualls',
-    players: teamB,
+    players: teamJay,
   },
   {
     userId: 'joetubesocks',
     name: 'Joe Toussaint',
-    players: teamA,
+    players: teamJoe,
   },
 ];
 
-let tourneyTracker = TournamentTracker(eventId);
-userList.forEach((user) => {
-  let userTracker = UserFantasyScoreTracker(user, eventId, user.players);
-  tourneyTracker.users.push(userTracker);
-});
+// let tourneyTracker = TournamentTracker(eventId);
+// userList.forEach((user) => {
+//   let userTracker = UserFantasyScoreTracker(user, eventId, user.players);
+//   tourneyTracker.users.push(userTracker);
+// });
 
 async function getPerRoundScores(eventId, round, eventName, totalRounds) {
   let curRound = round > 3 ? 'Finals' : round;
@@ -69,11 +74,24 @@ async function getPerRoundScores(eventId, round, eventName, totalRounds) {
     );
     // loop through each user's player
     playerData.forEach((player) => {
+      let isRoundComplete = player.Completed == '1';
       let scores = player.Scores.split(',').filter((i) => i != '');
       let pars = player.Pars.split(',');
       let place = player.RunningPlace;
-      let placePoints = calcFunctions.calculatePlacementScore(place);
+      let placePoints = calcFunctions.calculatePlacementScore(
+        place,
+        isFinalRound
+      );
 
+      let initialObj = {
+        perHoleTotal: 0,
+        isBogeyFree: true,
+        birdieStreak: 0,
+        birdieStreakPoints: 0,
+        numOfBirdieStreaks: 0,
+      };
+
+      // TODO: Move this section to calcFunctions.. also name it something other than calcFunctions
       const {
         perHoleTotal,
         isBogeyFree,
@@ -81,47 +99,40 @@ async function getPerRoundScores(eventId, round, eventName, totalRounds) {
         birdieStreakPoints,
         numOfBirdieStreaks,
         birdieData,
-      } = scores.reduce(
-        (prev, cur, idx) => {
-          let curHoleScore = calcFunctions.calculatePerHoleScore(
-            parseInt(pars[idx]),
-            parseInt(cur)
-          );
+      } = scores.reduce((prev, cur, idx) => {
+        // if (cur.Completed == '0') return initialObj;
+        let curHoleScore = calcFunctions.calculatePerHoleScore(
+          parseInt(pars[idx]),
+          parseInt(cur)
+        );
 
-          const {
-            curBirdieStreak,
-            curNumOfBirdieStreaks,
-            curBirdieStreakPoints,
-          } = calcFunctions.calculateBirdieStreakPoints(
-            curHoleScore,
-            prev.birdieStreak,
-            prev.numOfBirdieStreaks,
-            prev.birdieStreakPoints
-          );
+        const {
+          curBirdieStreak,
+          curNumOfBirdieStreaks,
+          curBirdieStreakPoints,
+        } = calcFunctions.calculateBirdieStreakPoints(
+          curHoleScore,
+          prev.birdieStreak,
+          prev.numOfBirdieStreaks,
+          prev.birdieStreakPoints
+        );
 
-          return {
-            perHoleTotal: prev.perHoleTotal + curHoleScore,
-            isBogeyFree: curHoleScore > 0 && prev.isBogeyFree,
-            birdieStreak: curBirdieStreak,
-            birdieStreakPoints: curBirdieStreakPoints,
-            numOfBirdieStreaks: curNumOfBirdieStreaks,
-          };
-        },
-        {
-          perHoleTotal: 0,
-          isBogeyFree: true,
-          birdieStreak: 0,
-          birdieStreakPoints: 0,
-          numOfBirdieStreaks: 0,
-        }
-      );
+        return {
+          perHoleTotal: prev.perHoleTotal + curHoleScore,
+          isBogeyFree: curHoleScore > 0 && prev.isBogeyFree && isRoundComplete, // TODO: Review this logic.
+          birdieStreak: curBirdieStreak,
+          birdieStreakPoints: curBirdieStreakPoints,
+          numOfBirdieStreaks: curNumOfBirdieStreaks,
+        };
+      }, initialObj);
 
-      let bogeyFreePoints = isBogeyFree ? 3 : 0;
+      let bogeyFreePoints = isBogeyFree && isRoundComplete ? 3 : 0;
 
       let thisRoundFantasyScore = {
         name: player.Name,
         eventId,
         curRound,
+        isRoundComplete,
         place,
         placePoints,
         perHoleTotal,
@@ -129,9 +140,12 @@ async function getPerRoundScores(eventId, round, eventName, totalRounds) {
         numOfBirdieStreaks,
         isBogeyFree,
         bogeyFreePoints,
+        subTotalScore: perHoleTotal + birdieStreakPoints + bogeyFreePoints,
         totalScore:
           placePoints + perHoleTotal + birdieStreakPoints + bogeyFreePoints,
       };
+
+      // console.log(thisRoundFantasyScore);
 
       tourneyTracker.users.map((u) =>
         u.userId === currentUser.userId
@@ -157,12 +171,10 @@ async function getPerRoundScores(eventId, round, eventName, totalRounds) {
   `);
 
   // save the JSON to disk
-  if (isFinalRound) {
-    await fs.promises.writeFile(
-      'output.json',
-      JSON.stringify(tourneyTracker, null, 2)
-    );
-  }
+  await fs.promises.writeFile(
+    `output-rd-${round}.json`,
+    JSON.stringify(tourneyTracker, null, 2)
+  );
 }
 
 // start the main script
@@ -171,6 +183,8 @@ main();
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
+
+let tourneyTracker = TournamentTracker(eventId);
 
 async function main() {
   let { data: eventData } = await getEventData(eventId);
@@ -184,10 +198,40 @@ async function main() {
 
   console.log(eventName);
 
+  userList.forEach((user) => {
+    let userTracker = UserFantasyScoreTracker(
+      user,
+      eventId,
+      user.players,
+      totalRounds
+    );
+    tourneyTracker.users.push(userTracker);
+  });
+
   for (const round of totalRounds) {
     console.log(`Fetching Round ${round} data...`);
     await getPerRoundScores(eventId, round, eventName, totalRounds);
   }
+
+  // winning bonus
+  tourneyTracker.users.map((u) => {
+    let idx = tourneyTracker.leaderboard.findIndex((item) => item === u.userId);
+    return idx === -1 ? u : (u.finishedPlace = idx + 1);
+  });
+
+  console.log(`
+  -------------------------------
+  ------- FINAL RESULTS ---------
+  -------------------------------
+  `);
+  tourneyTracker.users
+    .sort((a, b) => b.totalFantasyPoints - a.totalFantasyPoints)
+    .forEach((u, idx) => {
+      console.log(`${idx + 1}. ${u.name} - Score: ${u.totalFantasyPoints}`);
+    });
+  console.log(`
+
+  `);
 }
 
 async function getEventData(eventId) {
